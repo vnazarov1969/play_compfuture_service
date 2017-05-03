@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=9" />
+    <meta content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, width=device-width" name="viewport"/>
+    <title></title>
+    <link href='http://fonts.googleapis.com/css?family=Roboto:400,500,700,300&subset=latin,cyrillic' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href=@routes.Assets.at("css/main.css")>
+    <script type="text/javascript" src=@routes.Assets.at("js/jquery.min.js")></script>
+    <script type="text/javascript" src=@routes.Assets.at("js/jquery-ui.min.js")></script>
+    <script type="text/javascript" src=@routes.Assets.at("js/jquery.ui.touch-punch.js")></script>
+    <script type="text/javascript" src=@routes.Assets.at("js/placeholders.jquery.min.js")></script>
+    <script type="text/javascript" charset="utf8" src='@routes.Assets.at("js/vue.min.js")'></script>
+
+    <script type="text/javascript" src=@routes.Assets.at("js/scripts.js")></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCvUQCy4goWfjRi7LDRZ8Nv76DO1n5BVQE&libraries=places&language=ru&callback=initMap"
+          async defer></script>
+
+
+  <style>
+       #legend {
+        font-family: Arial, sans-serif;
+        background: #fff;
+        padding: 10px;
+        margin: 10px;
+        border: 3px solid #000;
+      }
+      #legend h3 {
+        margin-top: 0;
+      }
+
+  </style>
+  <script>
+    var needInitMap = true;
+    var app = null;
+    function initMap(){
+      if (app){
+          app.initMap();
+          needInitMap = false;
+      }
+    }
+
+</script>
+
+</head>
+<body>
+<div class="page-navigation-wrap">
+    <div class="page-navigation">
+        <a href="#first" class="page-navigation__item current"></a>
+        <a href="#second" class="page-navigation__item"></a>
+        <a href="#third" class="page-navigation__item"></a>
+    </div>
+</div>
+<div id ="main" class="wrap">
+    <div class="section section--start" id="first">
+        <div class="section__inner">
+            <div class="top-section">
+                <div class="logo"></div>
+                <div class="text-logo">Реклама на транспорте</div>
+            </div>
+            <div class="bottom-section">
+                <div class="bottom-section__col">
+                    <div class="bottom-section__title">Кто мы?</div>
+                    <div class="bottom-section__text"><b>TransitAd</b> - сервис, предоставляющий вам возможность найти и рассчитать оптимальный маршрут общественного транспорта для размещения на нем вашей рекламы.</div>
+                </div>
+                <div class="bottom-section__col">
+                    <div class="bottom-section__title">Как пользоваться нашим сервисом?</div>
+                    <div class="bottom-section__text">1. Найдите или отметьте адрес на карте</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section" id="second">
+        <div class="section__inner">
+            <div class="map-wrap">
+                <div class="map" id="map"><img src=@routes.Assets.at("images/map.jpg") /></div>
+                <div class="search-bar">
+                    <div class="search-field">
+                        <input id="autocomplete" type="text" class="search-input" placeholder="Найти адрес" />
+                        <a id="addButton" href="#" class="add-location">Добавить</a>
+                    </div>
+                    <ul id="places" class="search-list">
+
+                    </ul>
+                    <div class="search-footer">
+                        <div class="search-footer__title">В радиусе</div>
+                        <div class="search-footer__controls">
+                            <div class="ui-slider-wrap">
+                                <div id="ui-slider"></div>
+                            </div>
+                            <a id="calcButton" class="button">Рассчитать</a>
+                        </div>
+                        <div class="search-footer__result"><span id="area">100 м</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section section--centered" id="third">
+        <div class="section__inner">
+            <div class="data-form">
+                <div class="data-form__title">Оставить заявку</div>
+                <div class="data-form__row">
+                    <input type="text" placeholder="Название компании" />
+                </div>
+                <div class="data-form__row">
+                    <input type="text" placeholder="Сфера деятельности" />
+                </div>
+                <div class="data-form__row">
+                    <input type="text" placeholder="Контактное лицо" />
+                </div>
+                <div class="data-form__row">
+                    <input type="email" placeholder="eMail" />
+                </div>
+                <div class="data-form__row">
+                    <input type="tel" placeholder="Контактный телефон" />
+                </div>
+                <div class="data-form__row data-form__row--submit">
+                    <input type="submit" class="button button--big" value="Отправить" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="legend"><h3>Маршруты</h3>
+  <div id="legendContent">
+
+  </div>
+
+</div>
+
+<script>
+
+      app = new Vue({
+        // element to mount to
+        el: '#main',
+        // initial data
+        data: {
+          map: null,
+          geocoder: null,
+          autocomplete: null,
+          places: [],
+          markers: [],
+          routes: null,
+        },
+        // computed property for form validation state
+        computed: {
+        },
+        // methods
+        methods: {
+          initAutocomplete: function () {
+            // Create the autocomplete object, restricting the search to geographical
+            // location types.
+            this.autocomplete = new google.maps.places.Autocomplete(
+              (document.getElementById('autocomplete')),
+              {types: ['geocode']});
+          },
+          initMap: function () {
+            app.map = new google.maps.Map(document.getElementById('map'), {
+              zoom: 15,
+              center: {lng: 30.37170, lat: 59.96738}
+            });
+            this.geocoder = new google.maps.Geocoder;
+            this.initAutocomplete();
+
+            this.map.addListener('click', function(event) {
+              app.addPlaceByLocation(event.latLng);
+            });
+
+            var legend = document.getElementById('legend');
+
+            app.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(legend);
+          },
+          addPlaceByLocation: function (location){
+            this.geocoder.geocode({'location': location}, function(results, status) {
+              if (status === 'OK') {
+                  if (results[0]) {
+                     app.addPlace(results[0]);
+                 //    $('#autocomplete input').val(results[0].name);
+                  } else {
+                    window.alert('No results found');
+                  }
+                } else {
+                  window.alert('Geocoder failed due to: ' + status);
+                }
+            });
+          },
+          addPlace : function(place) {
+
+            var address = '';
+            if (place.address_components) {
+            address = [
+              (place.address_components[0] && place.address_components[0].short_name || ''),
+              (place.address_components[1] && place.address_components[1].short_name || '')
+            ].join(', ');
+            }
+
+            str = '<li class="search-list__item"><span class="title">'+ address +
+            '</span><span class="add-point"></span><span class="remove"></span></li>';
+
+
+            $('#places').append(str);
+            app.places.push(place);
+            this.addMarker(place.geometry.location);
+          },
+          // Adds a marker to the map and push to the array.
+          addMarker: function(location) {
+            var marker = new google.maps.Marker({
+            position: location,
+            map: app.map
+            });
+          },
+          calcRoutes: function () {
+            var locations = [];
+            for (let place of this.places){
+              locations.push(place.geometry.location);
+            }
+            var request = {
+              "radius": $('#ui-slider').slider('value'),
+              "locations": locations,
+            }
+            $.ajax({
+                url: '/calc',
+                type: 'POST',
+                contentType: "application/json; charset=utf-8",
+                data: JSON.stringify(request),
+                dataType: "json",
+                success: function(data){
+                  app.routes = data;
+                  app.paintRoutes();
+                }
+            });
+          },
+          paintRoutes: function(){
+            var Colors = [
+              "#FF0000",
+              "#00FF00",
+              "#0000FF",
+              "#FFFFFF",
+              "#000000",
+              "#FFFF00",
+              "#00FFFF",
+              "#FF00FF"
+            ];
+            app.clearLegend();
+            for ( i in this.routes){
+              app.addRoute(this.routes[i], Colors[i % 8])
+            }
+          },
+
+          addRoute: function(item, color){
+            path = [];
+            reverse = [];
+            var route = item.route;
+            for ( i in route.coordinates[0]){
+              var point = route.coordinates[0][i].split(" ");
+              path.push({lat: parseFloat(point[0]), lng: parseFloat(point[1])})
+            }
+
+            for ( i in route.coordinates[1]){
+              var point = route.coordinates[1][i].split(" ");
+              reverse.push({lat: parseFloat(point[0]), lng: parseFloat(point[1])})
+            }
+
+            var routePath = new google.maps.Polyline({
+              path: path,
+              geodesic: true,
+              strokeColor: color,
+              strokeOpacity: 1.0,
+              strokeWeight: 2
+            });
+
+            routePath.setMap(app.map);
+
+            var reversePath = new google.maps.Polyline({
+              path: reverse,
+              geodesic: true,
+              strokeColor: color,
+              strokeOpacity: 1.0,
+              strokeWeight: 2
+            });
+
+            reversePath.setMap(app.map);
+            app.addLegendItem(route,color);
+          },
+          addLegendItem: function(route, color){
+            str = '<div><span style="color:'+ color +'">'+ route.name+'</span></div>';
+            $('#legendContent').append(str);
+          },
+          clearLegend: function(){
+            $('#legendContent').empty();
+          }
+
+        }
+      })
+
+
+    $( document ).ready(function() {
+        if (needInitMap){
+            app.initMap()
+        }
+        $('#addButton').click(function(){
+          place = app.autocomplete.getPlace();
+          if (!place.geometry) {
+            window.alert("No details available for input: '" + place.name + "'");
+            return;
+          }
+          app.addPlace(place);
+          return false;
+        });
+
+        $('#calcButton').click(function(){
+          app.calcRoutes();
+          return false;
+        });
+
+    });
+
+</script>
+
+
+</body>
+</html>
